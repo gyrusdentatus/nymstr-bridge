@@ -9,6 +9,24 @@ from aiosmtpd.handlers import Sink
 import argparse 
 import configparser
 import socket
+import aiodns
+import aiodnsresolver 
+
+async def resolve_ip(host):
+    resolver = aiodns.DNSResolver()
+
+    try:
+        # Try resolving IPv6 address
+        result = await resolver.gethostbyname(host, socket.AF_INET6)
+        return result.addresses[0]
+    except aiodns.error.DNSError:
+        try:
+            # Fall back to resolving IPv4 address
+            result = await resolver.gethostbyname(host, socket.AF_INET)
+            return result.addresses[0]
+        except aiodns.error.DNSError:
+            print(f"Error resolving {host}: both IPv4 and IPv6 resolution failed")
+            return None
 
 
 def read_env(file_path: str):
@@ -23,17 +41,52 @@ def read_env(file_path: str):
 
     return options
 
-load_dotenv()
-def send_message(email_server, email_port, email_user, email_pass):
+#import aiodns
+
+async def resolve_ip(host):
+    resolver = aiodns.DNSResolver()
+    result = await resolver.gethostbyname(host, socket.AF_INET)
+    return result.addresses[0]
+
+async def send_message_async(email_server, email_port, email_user, email_pass):
     recipient = input("Enter the recipient email address: ")
     message = input("Enter the message: ")
 
-    with smtplib.SMTP(email_server, email_port) as smtp:
-        smtp.starttls()
-        smtp.login(email_user, email_pass)
-        smtp.sendmail(email_user, [recipient], f"Subject: Test Message\n\n{message}")
+    ip_address = await resolve_ip(email_server)
 
-    print("Email sent successfully!")
+    socks.set_default_proxy(socks.SOCKS5, args.proxy_server, args.proxy_port)
+    socks.wrap_module(smtplib)
+
+    try:
+        with smtplib.SMTP_SSL(ip_address, email_port) as smtp:
+            smtp.set_debuglevel(1)
+            smtp.login(email_user, email_pass)
+            smtp.sendmail(email_user, recipient, message)
+        print("Email sent successfully!")
+    except Exception as e:
+        print("Error:", e)
+
+def send_message(email_server, email_port, email_user, email_pass):
+    asyncio.run(send_message_async(email_server, email_port, email_user, email_pass))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 class CustomSMTPHandler(Sink):
     def __init__(self, email_server, email_port, email_user, email_pass, proxy_server, proxy_port):
