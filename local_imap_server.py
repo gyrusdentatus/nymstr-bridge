@@ -2,6 +2,7 @@ import asyncio
 from aiosmtpd.controller import Controller
 from aiosmtpd.handlers import Sink
 from imapclient import IMAPClient
+import argparse 
 
 class CustomIMAPHandler(Sink):
     def __init__(self, email_config, proxy_config):
@@ -36,14 +37,27 @@ async def main(args):
     controller.start()
 
 if __name__ == "__main__":
+
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="A small CLI version of ProtonBridge with SOCKS5 proxy support.")
-    parser.add_argument("--email_server", type=str, required=True, help="Email server address")
-    parser.add_argument("--email_port", type=int, required=True, help="Email server port")
-    parser.add_argument("--email_user", type=str, required=True, help="Email username")
-    parser.add_argument("--email_pass", type=str, required=True, help="Email password")
-    parser.add_argument("--proxy_server", type=str, required=True, help="SOCKS5 proxy server address")
-    parser.add_argument("--proxy_port", type=int, required=True, help="SOCKS5 proxy server port")
+    parser.add_argument("--email_server", type=str, default=os.environ.get("EMAIL_SERVER"), required=True, help="Email server address")
+    parser.add_argument("--email_port", type=int, default=int(os.environ.get("EMAIL_PORT", 0)), required=True, help="Email server port")
+    parser.add_argument("--email_user", type=str, default=os.environ.get("EMAIL_USER"), required=True, help="Email username")
+    parser.add_argument("--email_pass", type=str, default=os.environ.get("EMAIL_PASS"), required=True, help="Email password")
+    parser.add_argument("--proxy_server", type=str, default=os.environ.get("PROXY_SERVER"), required=True, help="SOCKS5 proxy server address")
+    parser.add_argument("--proxy_port", type=int, default=int(os.environ.get("PROXY_PORT", 0)), required=True, help="SOCKS5 proxy server port")
 
     args = parser.parse_args()
 
     asyncio.run(main(args))
+
+
+
+
+
+
+
+
+
+
+
