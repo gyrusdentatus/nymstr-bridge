@@ -6,8 +6,34 @@ import smtplib
 import socks
 from aiosmtpd.controller import Controller
 from aiosmtpd.handlers import Sink
+import argparse 
+import configparser
+import socket
+
+
+def read_env(file_path: str):
+    config = configparser.ConfigParser()
+    config.read(file_path)
+
+    options = {}
+
+    for section in config.sections():
+        for key, value in config.items(section):
+            options[key] = value
+
+    return options
 
 load_dotenv()
+def send_message(email_server, email_port, email_user, email_pass):
+    recipient = input("Enter the recipient email address: ")
+    message = input("Enter the message: ")
+
+    with smtplib.SMTP(email_server, email_port) as smtp:
+        smtp.starttls()
+        smtp.login(email_user, email_pass)
+        smtp.sendmail(email_user, [recipient], f"Subject: Test Message\n\n{message}")
+
+    print("Email sent successfully!")
 
 class CustomSMTPHandler(Sink):
     def __init__(self, email_server, email_port, email_user, email_pass, proxy_server, proxy_port):
@@ -40,15 +66,23 @@ async def main(args):
     controller = Controller(handler, hostname="localhost", port=8025)
     controller.start()
 
+    try:
+        socket.getaddrinfo(args.email_server, args.email_port)
+        print(f"Resolved {args.email_server}:{args.email_port}")
+    except socket.gaierror as e:
+        print(f"Error resolving {args.email_server}:{args.email_port}: {e}")
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="A small CLI version of ProtonBridge with SOCKS5 proxy support.")
-    parser.add_argument("--email_server", type=str, default=os.environ.get("EMAIL_SERVER"), required=True, help="Email server address")
-    parser.add_argument("--email_port", type=int, default=int(os.environ.get("EMAIL_PORT", 0)), required=True, help="Email server port")
-    parser.add_argument("--email_user", type=str, default=os.environ.get("EMAIL_USER"), required=True, help="Email username")
-    parser.add_argument("--email_pass", type=str, default=os.environ.get("EMAIL_PASS"), required=True, help="Email password")
-    parser.add_argument("--proxy_server", type=str, default=os.environ.get("PROXY_SERVER"), required=True, help="SOCKS5 proxy server address")
-    parser.add_argument("--proxy_port", type=int, default=int(os.environ.get("PROXY_PORT", 0)), required=True, help="SOCKS5 proxy server port")
+    options = read_env('.env')
 
-    args = parser.parse_args()
+    class Args:
+        email_server = options['email_server']
+        email_port = int(options['email_port'])
+        email_user = options['email_user']
+        email_pass = options['email_pass']
+        proxy_server = options['proxy_server']
+        proxy_port = int(options['proxy_port'])
 
+    args = Args()
     asyncio.run(main(args))
+    send_message(args.email_server, args.email_port, args.email_user, args.email_pass)
