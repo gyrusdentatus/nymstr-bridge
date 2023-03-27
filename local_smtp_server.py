@@ -6,11 +6,21 @@ import smtplib
 import socks
 from aiosmtpd.controller import Controller
 from aiosmtpd.handlers import Sink
-import argparse 
 import configparser
 import socket
 import aiodns
-import aiodnsresolver 
+
+def read_env(file_path: str):
+    config = configparser.ConfigParser()
+    config.read(file_path)
+
+    options = {}
+
+    for section in config.sections():
+        for key, value in config.items(section):
+            options[key] = value
+
+    return options
 
 async def resolve_ip(host):
     resolver = aiodns.DNSResolver()
@@ -28,31 +38,14 @@ async def resolve_ip(host):
             print(f"Error resolving {host}: both IPv4 and IPv6 resolution failed")
             return None
 
-
-def read_env(file_path: str):
-    config = configparser.ConfigParser()
-    config.read(file_path)
-
-    options = {}
-
-    for section in config.sections():
-        for key, value in config.items(section):
-            options[key] = value
-
-    return options
-
-#import aiodns
-
-async def resolve_ip(host):
-    resolver = aiodns.DNSResolver()
-    result = await resolver.gethostbyname(host, socket.AF_INET)
-    return result.addresses[0]
-
 async def send_message_async(email_server, email_port, email_user, email_pass):
     recipient = input("Enter the recipient email address: ")
     message = input("Enter the message: ")
 
     ip_address = await resolve_ip(email_server)
+
+    if ip_address is None:
+        return
 
     socks.set_default_proxy(socks.SOCKS5, args.proxy_server, args.proxy_port)
     socks.wrap_module(smtplib)
@@ -68,25 +61,6 @@ async def send_message_async(email_server, email_port, email_user, email_pass):
 
 def send_message(email_server, email_port, email_user, email_pass):
     asyncio.run(send_message_async(email_server, email_port, email_user, email_pass))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 class CustomSMTPHandler(Sink):
     def __init__(self, email_server, email_port, email_user, email_pass, proxy_server, proxy_port):
@@ -119,11 +93,12 @@ async def main(args):
     controller = Controller(handler, hostname="localhost", port=8025)
     controller.start()
 
-    try:
-        socket.getaddrinfo(args.email_server, args.email_port)
-        print(f"Resolved {args.email_server}:{args.email_port}")
-    except socket.gaierror as e:
-        print(f"Error resolving {args.email_server}:{args.email_port}: {e}")
+
+
+
+
+
+
 
 if __name__ == "__main__":
     options = read_env('.env')
